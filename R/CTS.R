@@ -17,7 +17,12 @@
 #' to<-"PubChem CID"
 #' CTSgetR(id,from,to)
 #' }
-CTSgetR<-function(id,from,to,limit.values=TRUE,progress=TRUE,server="http://cts.fiehnlab.ucdavis.edu/service/convert"){ 
+CTSgetR<-function(id, 
+                  from,
+                  to,
+                  limit.values=TRUE,
+                  progress=TRUE,
+                  server="http://cts.fiehnlab.ucdavis.edu/service/convert"){ 
 
 	opts<-CTS.options()
 	if(any(!to%in%opts) || any(!from%in%opts)) {
@@ -26,56 +31,75 @@ CTSgetR<-function(id,from,to,limit.values=TRUE,progress=TRUE,server="http://cts.
 	  paste0("The supplied to: ",to, " or from: ", from," are not in the list of available options.\nSee CTS.options() for possible arguments.","\n",collapse="")
 	)
 	}
+	
+	if ("Chemical Name" %in% to) {
+	  stop('Chemical Name is not available for CTS services\n')
+	}
 # 
 # 	fixlc<-function(obj){as.character(unlist(obj))} #redo w/ dplyr and httr
 	if(progress) cat("Getting translations...","\n")
 
 	  if(length(to)>1){
-	    CTSgetR:::multi.CTSgetR(server=server,from=from,to=to,id=id,progress=progress,limit.values=limit.values)
+	    CTSgetR:::multi.CTSgetR(server=server,
+	                            from=from,
+	                            to=to,
+	                            id=id,
+	                            progress=progress,
+	                            limit.values=limit.values)
 	  } else {
-	    CTSgetR:::CTS.translate(server=server,from=from,to=to,id=id,progress=progress,limit.values=limit.values) 
+	    CTSgetR:::CTS.translate(server=server,
+	                            from=from,
+	                            to=to,
+	                            id=id,
+	                            progress=progress,
+	                            limit.values=limit.values) 
 	  }
 		
 	
 }
 
 
-CTS.translate<-function(server,from,to,id,progress=TRUE,limit.values=TRUE){ 
-	  
+CTS.translate <- function(server,
+                          from,
+                          to,
+                          id,
+                          progress=TRUE,
+                          limit.values=TRUE){ 
   
-    url<-paste(server,from,to,id,sep="/")
-	
-		if(progress) pb <- txtProgressBar(min = 0, max = length(id), style = 3)
-		content<-lapply(1:length(id), function(i)
-			{
-				if(progress) setTxtProgressBar(pb, i)
-		    out<-content(GET(URLencode(url[i]))) 
-		    #condition on results
-		    if(length(out[[1]]$result)==0) {
-		      out[[1]]$result<-""
-		      #remove error
-		      if(!is.null(out[[1]]$error)) {
-		        out[[1]]$result<-"error"
-		        out[[1]]$error<-NULL
-		      }
-		    }  
-	      #combine multiple results 
-	      #combine multiple results
-	      out[[1]]$result<-data.frame(value=unlist(out[[1]]$result))
-	      
-		    #parse multiple returns
-		  if(limit.values) {
-		    setNames(data.frame(out),c('fromIdentifier','searchTerm','toIdentifier','value'))[1,,drop=FALSE]
-		  } else {
-		    setNames(data.frame(out),c('fromIdentifier','searchTerm','toIdentifier','value'))
-		  } 
-		   
-			})
-		
-		if(progress) close(pb)
-		
-		
-		return(do.call("rbind",content))
+  
+  url <- paste(server, from, to, id, sep="/")
+  
+  if(progress) pb <- utils::txtProgressBar(min = 0, max = length(id), style = 3)
+  content <- lapply(1:length(id), function(i)
+  {
+    if(progress) utils::setTxtProgressBar(pb, i)
+    out <- httr::content(httr::GET(utils::URLencode(url[i]))) 
+    #condition on results
+    if(length(out[[1]]$result)==0) {
+      out[[1]]$result<-""
+      #remove error
+      if(!is.null(out[[1]]$error)) {
+        out[[1]]$result<-"error"
+        out[[1]]$error<-NULL
+      }
+    }  
+    #combine multiple results 
+    #combine multiple results
+    out[[1]]$result<-data.frame(value=unlist(out[[1]]$result))
+    
+    #parse multiple returns
+    if(limit.values) {
+      setNames(data.frame(out),c('fromIdentifier','searchTerm','toIdentifier','value'))[1,,drop=FALSE]
+    } else {
+      setNames(data.frame(out),c('fromIdentifier','searchTerm','toIdentifier','value'))
+    } 
+    
+  })
+  
+  if(progress) close(pb)
+  
+  
+  return(do.call("rbind",content))
 }
 
 
@@ -86,7 +110,7 @@ CTS.translate<-function(server,from,to,id,progress=TRUE,limit.values=TRUE){
 #' @import httr
 #' @details get translation options from CTS
 CTS.options<-function(url="http://cts.fiehnlab.ucdavis.edu/service/conversion/toValues"){
-		content(GET(url))
+		httr::content(httr::GET(url))
 	}
 
 #' @title multi.CTSgetR
